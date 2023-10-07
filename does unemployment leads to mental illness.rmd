@@ -1,0 +1,1035 @@
+---
+title: "FINAL CODE"
+author: "Khushbu Patel , huda , sabiha, abuzar, henry"
+date: "2023-06-19"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list= ls())     # Removes all variables stored prviously 
+library(Hmisc)     # Import this package
+```
+
+
+
+```{r}
+##################################
+##    IMPORTING THE DATASET    ###
+##################################
+df <- read.csv("Mental Illness Survey 1.csv",header = TRUE)
+describe(df)       # Hmisc Command  
+summary(df)        # function to summarize the common descriptive statistics of different features in your dataset.
+df <- df[-1, ]     # Delete the first row 
+View(df)
+colnames(df)       # Display columns name
+dim(df)            # Display the Number of Rows and columns
+View(df)           # View the dataframe in an interactive window
+sapply(df, class)  # Check datatype
+```
+
+```{r}
+###########################################
+###    HANDLING MISSING VALUES   ###
+###########################################
+###########################
+# Assign NA to empty cells #
+##########################
+df[df == ""] <- NA
+sapply(df, function(x) sum(is.na(x)))  # Check missing values 
+# List of columns to remove
+remove_cols <- c('Respondent.ID', 'Collector.ID','Start.Date', 'End.Date', 'IP.Address','Email.Address',
+                 'First.Name', 'Last.Name','Last.Name','Custom.Data.1','I.have.been.hospitalized.before.for.my.mental.illness')
+### Why you removed this column ! 'I.have.been.hospitalized.before.for.my.mental.illness'  with How many times were you hospitalized for your mental illness  because they bring the same insight or information 
+#Remove columns in list
+new_df = subset(df, select = !(names(df) %in% remove_cols))
+```
+```{r}
+#######################################
+## Convert categorical Var into Fact ##
+######################################
+# Function to convert categorical variables into factors
+convertToFactor <- function(new_df, cols_to_convert) {
+  for (col in cols_to_convert) {
+    new_df[[col]] <- factor(data[[col]])
+  }
+  return(new_df)
+}
+```
+
+
+```{r}
+str(new_df)
+```
+
+```{r}
+#########################################
+# Replace Yes and No's with 0s and 1s #
+#######################################
+new_df[new_df == 'No'] <- 0
+new_df[new_df == 'Yes'] <- 1
+View(new_df)
+```
+
+
+```{r}
+##################################
+## Imputation Replace NA with 0 ##
+##################################
+new_df[is.na(new_df)] <- 0
+class(new_df)# Check the type of each data 
+```
+
+```{r}
+###################################
+####    renaming Columns    ####### 
+###################################
+names(new_df)[names(new_df) == "How.many.days.were.you.hospitalized.for.your.mental.illness"] <- "Hospitalization Frequency"
+names(new_df)[names(new_df) == "I.am.currently.employed.at.least.part.time"] <- "Current Employment Status (at least part-time)"
+names(new_df)[names(new_df) == "I.identify.as.having.a.mental.illness"] <- "MentallyIll"
+names(new_df)[names(new_df) == "I.am.unemployed"] <- "Unemployed"
+names(new_df)[names(new_df) == "I.have.one.of.the.following.issues.in.addition.to.my.illness"] <- "Additional Issues"
+names(new_df)[names(new_df) ==  "I.receive.food.stamps"] <- "Receiving Food Stamps"
+names(new_df)[names(new_df) == "I.live.with.my.parents"] <- "Living with Parents"
+names(new_df)[names(new_df) ==  "I.have.my.regular.access.to.the.internet" ] <- "Regular Internet Access."
+names(new_df)[names(new_df) == "Annual.income..including.any.social.welfare.programs..in.USD"] <- "Income"
+names(new_df)[names(new_df) == "I.am.on.section.8.housing"] <- "Section 8 Housing" #  this program run by the United States Department of Housing and Urban Development (HUD) gives financial assistance to people who are struggling to pay rent.
+names(new_df)[names(new_df) == "Annual.income.from.social.welfare.programs"] <- "Annual Income from Social Welfare Programs"
+names(new_df)[names(new_df) == "I.am.legally.disabled"] <- "Legally Disabled"
+names(new_df)[names(new_df) == "I.have.a.gap.in.my.resume"] <- "Resume Gap Present."
+names(new_df)[names(new_df) == "I.have.my.own.computer.separate.from.a.smart.phone" ] <- "Own Computer (Separate from a Smartphone)"
+names(new_df)[names(new_df) == "I.read.outside.of.work.and.school"] <- "Reading Outside of Work and School"
+names(new_df)[names(new_df) == "Total.length.of.any.gaps.in.my.resume.in.months."] <- "Total Length of Resume Gaps (in months)"
+names(new_df)[names(new_df) == "How.many.times.were.you.hospitalized.for.your.mental.illness"] <- "HowManyTimesHospitalized"
+
+sapply(new_df, function(x) sum(is.na(x))) # Only two features having missing values 
+# 37==>  How.many.days.were.you.hospitalized.for.your.mental.illness 
+# 2 ==> Region 
+```
+
+
+
+```{r}
+#summary(new_df$Income)     
+describe(new_df$Income) 
+new_df[!duplicated(new_df), ]                     #remove duplicate rows from data frame
+```
+
+```{r}
+
+# Convert columns 3 to 17 to numeric with error handling
+new_df[, 3:17] <- apply(new_df[, 3:17], 2, as.numeric)
+
+```
+
+```{r}
+#########################
+   # Convert into factor 
+new_df <- as.data.frame(unclass(new_df), stringsAsFactors = TRUE)
+###########################################
+
+length(new_df$Unemployed)
+count_zeros <- sum(new_df$Unemployed == 0)
+
+```
+```{r}
+# Load required library
+library(ggplot2)
+
+# Select numeric columns from the dataframe
+numeric_columns <- sapply(new_df, is.numeric)
+
+# Create a melted dataframe for box plots
+melted_df <- reshape2::melt(new_df[, numeric_columns])
+
+# Create the box plot using ggplot
+ggplot(melted_df, aes(x = variable, y = value)) +
+  geom_boxplot() +
+  labs(title = "Box Plots of Numeric Features",
+       x = "Columns",
+       y = "Values") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
+######################################
+## Bar plot of education credentials #
+######################################
+
+library(ggplot2)
+ggplot(df, aes(x = Education)) +
+  geom_bar(fill = "salmon", color = "salmon") +
+  labs(x = "Education Credential", y = "Count") +
+  ggtitle("Number of Each Education Credential") +
+  #scale_fill_manual(values = c("darkgreen", "orange", "darkblue", "cyan", "magenta", "yellow")) +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 16, face = "bold"),
+        axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        axis.line = element_line(color = "black"))
+```
+
+
+```{r}
+#describe(new_df$Age)
+
+Mental <- new_df[["MentallyIll"]]
+Income <- new_df[["Income"]]
+Unemployed <- new_df[["Unemployed"]]
+Gender <- new_df[["Gender"]]
+Age <- new_df[["Age"]]
+edu <- new_df[["Education"]]
+print(edu)
+
+sixty <- list()
+fifty <- list()
+thirty <- list()
+twenty <- list()
+
+for (i in 1:length(Age))
+{
+  if (Age[i] == "> 60") {
+    sixty[[length(sixty) + 1]] <- list(Age = Age[i], Income = Income[i], Unemployed = Unemployed[i])
+  } else if (Age[i] == "45-60") {
+    fifty[[length(fifty) + 1]] <- list(Age = Age[i], Income = Income[i], Unemployed = Unemployed[i])
+  } else if (Age[i] == "30-44") {
+    thirty[[length(thirty) + 1]] <- list(Age = Age[i], Income = Income[i], Unemployed = Unemployed[i])
+  } else if (Age[i] == "18-29") 
+    twenty[[length(twenty) + 1]] <- list(Age = Age[i], Income = Income[i], Unemployed = Unemployed[i])
+}
+
+ 
+thirty #Taking any one age group to display output
+
+```
+
+```{r}
+
+# Create the box plot
+box_plot <- ggplot(new_df, aes(x = "", y = Income)) +
+  geom_boxplot(fill = "purple", color = "black") +
+  geom_point(aes(y = median(Income)), color = "white", size = 3) +
+  geom_segment(aes(x = 0.7, xend = 1.3, y = min(Income), yend = min(Income)), color = "black", size = 1.5) +
+  geom_segment(aes(x = 0.7, xend = 1.3, y = max(Income), yend = max(Income)), color = "black", size = 1.5) +
+  labs(x = "", y = "Income", title = "Box Plot") +
+  theme_minimal() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text.x = element_blank(),
+    plot.margin = unit(c(5, 5, 5, 5), "mm")
+  )
+box_plot
+```
+```{r}
+
+# Create the density plot
+density_plot <- ggplot(data = new_df, aes(x = new_df$Income)) +
+  geom_density(fill = "lightblue", color = "darkblue") +
+  labs(title = "Density Plot", x = "income")
+density_plot 
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+# Create a table summarizing employed and unemployed count for each age group
+age_unemployed_table <- new_df %>%
+  group_by(Age, Unemployed) %>%
+  summarise(count = n()) %>%
+  spread(Unemployed, count, fill = 0)
+
+# Calculate the total count of individuals in each age group
+age_unemployed_table <- age_unemployed_table %>%
+  mutate(total_count = `1` + `0`)  # Replace with actual column names for employed and unemployed
+
+# Calculate the percentage of unemployed individuals within each age group
+age_unemployed_table <- age_unemployed_table %>%
+  mutate(percentage_unemployed = (`0` / total_count) * 100)  # Replace with actual column name for unemployed
+
+# Display the results
+age_unemployed_table
+
+
+
+```
+
+
+
+```{r}
+#####################
+# plot the result #
+#####################
+# Plot the results as a bar plot
+library(ggplot2)
+
+text_color <- "#333333" # Dark gray color for text
+
+# Define custom colors
+bar_color <- "#FF6F61"  # Red color for bars
+
+# Create the bar plot
+plt <- ggplot(age_unemployed_table, aes(x = Age, y = percentage_unemployed, fill = Age)) +
+  geom_bar(stat = "identity", color = "black") +
+  geom_text(aes(label = paste0(round(percentage_unemployed, 1), "%")),
+            vjust = -0.5, color = text_color, size = 4) +
+  labs(x = "Age Group", y = "Percent Unemployed") +
+  ggtitle("Percent Unemployed by Age Group") +
+  theme_minimal() +
+  theme(plot.title = element_text(color = text_color, size = 16, face = "bold"),
+        axis.text.x = element_text(color = text_color, size = 12, face = "bold", angle = 45, hjust = 1),
+        axis.text.y = element_text(color = text_color, size = 12, face = "bold"),
+        axis.title = element_text(color = text_color, size = 14, face = "bold"),
+        legend.title = element_blank(),
+        legend.text = element_text(color = text_color, size = 12, face = "bold"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank())
+
+# Display the plot
+print(plt)
+```
+
+```{r}
+library(ggplot2)
+
+# Convert 'HowManyTimesHospitalized' to numeric
+new_df$HowManyTimesHospitalized <- as.numeric(new_df$HowManyTimesHospitalized)
+
+# Create a grouped bar plot
+ggplot(new_df, aes(x = Gender, y = HowManyTimesHospitalized, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  xlab("Gender") +
+  ylab("Number of Hospitalizations") +
+  ggtitle("Number of Hospitalizations by Gender")
+
+```
+```{r}
+
+library(ggplot2)
+
+# Convert 'HowManyTimesHospitalized' to numeric
+new_df$HowManyTimesHospitalized <- as.numeric(new_df$HowManyTimesHospitalized)
+
+# Create a grouped bar plot with Gender and Age
+ggplot(new_df, aes(x = Gender, y = HowManyTimesHospitalized, fill = Age)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  xlab("Gender") +
+  ylab("Number of Hospitalizations") +
+  ggtitle("Number of Hospitalizations by Gender and Age")
+```
+
+```{r}
+library(ggplot2)
+
+# Count the number of MentallyIll and compare with Unemployed column values
+count_df <- data.frame(
+  MentallyIll = c(sum(new_df$MentallyIll == 1), sum(new_df$MentallyIll == 0)),
+  Unemployed = c("Mentally Ill", "Not Mentally Ill"),
+  stringsAsFactors = FALSE
+)
+
+# Create the bar plot with custom colors
+plt <- ggplot(count_df, aes(x = Unemployed, y = MentallyIll, fill = Unemployed)) +
+  geom_bar(stat = "identity", width = 0.7) +
+  labs(x = "Mentally Ill Status", y = "Count") +
+  ggtitle("Count of Mentally Ill and Not Mentally Ill") +
+  scale_fill_manual(values = c("Mentally Ill" = "orange", "Not Mentally Ill" = "red")) +
+  theme_minimal()
+
+# Display the plot
+print(plt)
+```
+
+
+
+```{r}
+
+colnames(new_df)[18:25] <- c("Lack of concentration", "Anxiety", "Depression", "ObsessiveThinking", "MoodSwings", "PanicAttacks", "CompulsiveBehavior", "Tiredness")
+View(new_df)
+```
+
+```{r}
+
+# Replace issues with binary representations
+issue_columns <- c("Lack of concentration", "Anxiety", "Depression", "ObsessiveThinking",
+                   "MoodSwings", "PanicAttacks", "CompulsiveBehavior", "Tiredness")
+
+for (col in issue_columns) {
+  new_df[, col] <- ifelse(new_df[, col] == col, 1, 0)
+}
+```
+
+```{r}
+# Replace gender -> Male = 1, Female = 0
+new_df$Gender <- ifelse(new_df$Gender == "Male", 1, 0)
+
+# Replace age with median
+new_df$Age <- ifelse(new_df$Age == "> 60", 65,
+                     ifelse(new_df$Age == "45-60", 52,
+                            ifelse(new_df$Age == "30-44", 37, 23)))
+
+# Replace education with ranking, 0 is lowest educated 7 is highest
+education_mapping <- c('High School or GED' = 1, 'Some highschool' = 0,
+                       'Some Undergraduate' = 2, 'Completed Undergraduate' = 3,
+                       'Some\xa0Masters' = 4, 'Completed Masters' = 5,
+                       'Some Phd' = 6, 'Completed Phd' = 7)
+new_df$Education <- education_mapping[new_df$Education]
+```
+
+```{r}
+new_df <- new_df[, 1:(length(new_df) - 3)]
+```
+
+```{r}
+str(new_df)
+
+```
+
+###Descriptive analysis###
+
+```{r}
+###########################################
+#     Check the type of each variable     #
+###########################################
+column_types <- sapply(new_df, class)   # Check the type of each column in the data frame
+print(column_types) # Print the column types
+#########################
+new_df$Education <- as.factor(new_df$Education)   # Convert into factor 
+new_df$Income <- as.numeric(new_df$Income)        # Character to numeric for Income column
+# OR #  Filter out non-numeric columns
+#numeric_cols <- sapply(new_df, is.numeric)
+###########################################
+```
+Calculate Summary Statistics: 
+
+```{R}
+mean_values <- sapply(new_df[, c("Income","Age")], mean)
+
+print(mean_values)
+var(new_df$Income,new_df$Age)   # variance (123.0723)
+sd<- sapply(new_df[, c("Income","Age")], sd)   # standard deviation (11.0938)
+range(new_df$Income,new_df$Age) # min=32.54 max=92.46
+max(new_df$Income ,new_df$Age )-min(new_df$Income,new_df$Age) #59.92
+quantile<- sapply(new_df[, c("Income","Age")], quantile) # 0%, 25%, 50%, 75%, 100%
+quantile_values <- c(0.41, 0.52, 0.93)
+quantile_columns <- c("Income", "Age")
+# Calculate quantiles for the specified columns and values
+quantiles <- quantile(new_df[, quantile_columns], probs = quantile_values, na.rm = TRUE)
+# Calculate IQR for "Income" and "Age" columns
+iqr_values <- apply(new_df[, c("Income", "Age")], 2, IQR, na.rm = TRUE)
+
+# Print the calculated IQR values
+print(iqr_values)
+summary(new_df$Income,new_df$Age)
+
+```
+# we are taking only income and age value as there is only two numeric column in this dataset
+
+```{r}
+
+###########################################
+#     Check the type of each variable     #
+###########################################
+column_types <- sapply(new_df, class)   # Check the type of each column in the data frame
+print(column_types) # Print the column types
+#########################
+new_df$Education <- as.factor(new_df$Education)   # Convert into factor 
+new_df$Income <- as.numeric(new_df$Income)        # Character to numeric for Income column
+# OR #  Filter out non-numeric columns
+#numeric_cols <- sapply(new_df, is.numeric)
+###########################################
+```
+
+Explore Employment Status:
+1. Calculate frequencies and percentages of employed, unemployed, and other employment categories.
+
+
+```{r}
+#Calculate frequencies and percentages of employed, unemployed
+employment_freq <- table(new_df$Unemployed)
+total_individuals <- nrow(new_df)
+employment_percent <- prop.table(employment_freq) * 100
+result <- data.frame(Frequency = employment_freq, Percentage = employment_percent)
+print(result)
+
+new_df
+
+```
+2.Compare the employment status across different demographic groups and mental health conditions.
+
+
+```{r}
+
+
+# Load required libraries
+library(ggplot2)
+library(dplyr)
+
+
+# Cross-tabulation of employment status and mental health conditions
+mental_health_table <- table(new_df$MentallyIll, new_df$Unemployed)
+
+# Cross-tabulation of employment status and demographic groups (e.g., age)
+age_table <- table(new_df$Income, new_df$Unemployed,new_df$Age)
+print(age_table)
+
+
+```
+
+```{r}
+# Chi-square test for mental health conditions using Fisher's exact test
+mental_health_fisher <- fisher.test(mental_health_table)
+mental_health_fisher
+```
+
+The analysis of the mental health table yielded a p-value of 0.0186, indicating a statistically significant association between the variables. The calculated odds ratio of 1.960954, along with the 95 percent confidence interval (1.093465 to 3.486772), suggests that there is evidence to support the hypothesis that the odds of the observed outcome are not equal to 1. This implies that there is a meaningful relationship between the variables being studied, signifying a potential influence of one variable on the odds of the other. Further investigation and consideration of the context are needed to fully understand the implications of this association.
+
+```{r}
+# Chi-square test for demographic groups (e.g., age) using Fisher's exact test
+# Create a contingency table of Income and Age
+demographic_table <- table(new_df$Income, new_df$Age)
+
+# Perform the chi-square test
+chi_square_result <- chisq.test(demographic_table)
+
+# Print the chi-square test results
+print(chi_square_result)
+
+```
+The Chi-squared test for the given probabilities resulted in a large test statistic (X-squared = 578.93) with a high degree of freedom (df = 83), leading to an extremely small p-value (< 2.2e-16). This significant p-value suggests that there is a strong association between the demographic groups (in this case, likely referring to income levels) and the variable being tested (such as age groups).
+
+The p-value being significantly less than any conventional level of significance (e.g., 0.05) indicates that the observed association between the variables is unlikely to have occurred by random chance. Therefore, we can conclude that there is a statistically significant relationship between the demographic groups and the variable under consideration.
+
+
+
+## plotting Employment Status across Different Age Groups
+```{r}
+library(ggplot2)
+
+# Create a bar plot
+ggplot(data = new_df, aes(x = factor(Unemployed), fill = factor(MentallyIll))) +
+  geom_bar(position = "stack") +
+  labs(title = "Employment Status across Mental Health Conditions", x = "Employment Status", y = "Count") +
+  theme_minimal()
+
+# Stacked bar plot for employment status across demographic groups (e.g., age)
+ggplot(new_df, aes(x = factor(Age), fill = factor(`Unemployed`))) +
+  geom_bar(position = "stack") +
+  labs(title = "Employment Status across Different Age Groups", x = "Age ", y = "Count") +
+  theme_minimal()
+
+```
+
+## Assess Education Level:
+1.Calculate frequencies and proportions for different education levels
+```{r}
+# Calculate frequencies and proportions for different education levels
+education_frequencies <- table(new_df$Education)
+education_proportions <- prop.table(education_frequencies) * 100  # Convert to percentages
+
+# Print the results
+print("Education Frequencies:")
+print(education_frequencies)
+cat("\n")
+print("Education Proportions (%):")
+print(education_proportions)
+```
+
+```{r}
+
+# Calculate frequencies and proportions of education levels
+education_freq <- table(new_df$Education)
+education_prop <- prop.table(education_freq) * 100
+
+# Display the results
+education_summary <- data.frame(Education = names(education_freq), Frequency = education_freq, Proportion = education_prop)
+print(education_summary)
+
+```
+
+2.Explore how education level influences employment opportunities and mental health outcomes.
+
+```{r}
+
+# Create bar plot of mental health outcomes by education level
+ggplot(new_df, aes(x = Education, fill = `MentallyIll`)) +
+  geom_bar(position = "stack") +
+  labs(title = "Mental Health Outcomes by Education Level")
+```
+## Employment Status by Education Level
+```{r}
+library(ggplot2)
+# Create bar plot of employment status by education level
+ggplot(new_df, aes(x = Education, fill = `Unemployed`)) +
+  geom_bar(position = "stack") +
+  labs(title = "Employment Status by Education Level")
+
+```
+##Explore Income Distribution:
+
+● Investigate the association between income, employment status, and mental health conditions.
+
+```{r}
+################################ 
+#Investigate the association between income, employment status, and mental health conditions.
+################################
+
+# Create a box plot to visualize income by mental health condition
+ggplot(new_df, aes(x = factor(MentallyIll), y = Income)) +
+  geom_boxplot(fill = "lightgreen", color = "black") +
+  labs(title = "Income by Mental Health Condition", x = "Mentally Ill", y = "Income")
+
+```
+# exploring more about the income level influences unemployment opportunities 
+```{r}
+# Perform two-sample t-test between income and employment status
+employed_income <- new_df$Income[new_df$Unemployed == 0]
+unemployed_income <- new_df$Income[new_df$Unemployed == 1]
+t_test_result <- t.test(employed_income, unemployed_income)
+```
+
+```{r}
+# Display t-test result
+cat("Two-Sample t-test Result between Income and Employment Status:\n")
+print(t_test_result)
+
+```
+# The Welch Two Sample t-test is used to compare the means of two independent groups when the assumption of equal variances is violated. Here's how to interpret the results:
+
+#1. **t-value:** The t-value is 4.2898. It represents the difference between the means of the employed and unemployed income groups, scaled by the variability within each group. Larger t-values indicate a greater difference between the groups.
+
+#2. **Degrees of Freedom (new_df):** The degrees of freedom are 156.81. This value accounts for the variability within each group and is used to determine the critical value for the t-test. A higher df value indicates a more reliable estimate of the population parameter.
+
+#3. **p-value:** The p-value is 3.117e-05 (approximately 0.00003117). It represents the probability of observing the given t-value (or a more extreme value) if the true means of the two groups are equal. A lower p-value suggests stronger evidence against the null hypothesis (that the means are equal). In this case, the p-value is extremely small, indicating strong evidence against the null hypothesis.
+
+#4. **Alternative Hypothesis:** The alternative hypothesis states that the true difference in means is not equal to 0. This aligns with the question of whether there is a significant difference in income between the employed and unemployed groups.
+
+#5. **Confidence Interval:** The 95 percent confidence interval is calculated as (8.403567, 22.746470). This interval provides a range within which we can be 95 percent confident that the true difference in population means lies. Since the interval does not include 0, it suggests that there is a statistically significant difference in income between the two groups.
+
+#6. **Sample Estimates:** The mean of the employed group (x) is 41.43548, and the mean of the unemployed group (y) is 25.86047. This gives you an idea of the direction and magnitude of the difference in means between the two groups.
+
+#Overall, based on the small p-value and the confidence interval not including 0, you can conclude that there is a significant difference in income between the employed and unemployed groups. The employed group has a higher mean income compared to the unemployed group, with a confidence interval that provides an estimate of the range of this difference.
+
+```{r}
+# Load required library
+library(corrplot)
+
+# Drop the specified columns
+new_df= selected_columns <- new_df %>%
+  select(-ObsessiveThinking, -MoodSwings, -PanicAttacks, -CompulsiveBehavior)
+new_df
+```
+
+```{r}
+# Convert non-numeric columns to numeric
+new_df_numeric <- as.data.frame(lapply(new_df, as.numeric))
+
+# Calculate the correlation matrix
+correlation_matrix <- cor(new_df_numeric)
+
+# Load the corrplot package
+library(corrplot)
+
+# Set the graphical device size before creating the plot
+options(repr.plot.width = 10, repr.plot.height = 10)
+
+# Plot the correlation matrix
+corrplot(correlation_matrix, method = "color", tl.cex = 0.20, cl.cex = 0.20, 
+         addCoef.col = "black", number.cex = 0.7)
+
+```
+MentallyIll - Anxiety (0.567)
+MentallyIll - Depression (0.712)
+Anxiety - Depression (0.587)
+These correlations suggest that there is a strong positive linear relationship between the variables mentioned
+
+
+##Statistical analysis##
+
+####### Random Forest ##########
+###############################
+```{r}
+####### Random Forest ##########
+###############################
+# Load the required library
+library(randomForest)
+new_df <- as.data.frame(unclass(new_df), stringsAsFactors = TRUE)
+# Assuming your target column is named "Unemployed"
+target <- new_df$Unemployed
+
+# Drop the target column from the dataframe to get features
+features <- new_df[, -which(names(new_df) == "Unemployed")]
+
+# Convert the target variable to factor
+target <- as.factor(target)
+
+# Split the data into train and test sets
+set.seed(0)
+split_idx <- sample(length(target), length(target) * 0.8)
+X_train <- features[split_idx, ]
+X_test <- features[-split_idx, ]
+y_train <- target[split_idx]
+y_test <- target[-split_idx]
+
+# Create a random forest classifier
+forest <- randomForest(x = X_train, y = y_train, ntree = 100, mtry = 5, maxdepth = 10)
+
+# Predict using the random forest model
+pred_forest <- predict(forest, newdata = X_test)
+
+# Calculate confusion matrix
+confusion_matrix <- table(Actual = y_test, Predicted = pred_forest)
+
+# Calculate True Positives, True Negatives, False Positives, and False Negatives
+TP <- confusion_matrix[2, 2]
+TN <- confusion_matrix[1, 1]
+FP <- confusion_matrix[1, 2]
+FN <- confusion_matrix[2, 1]
+
+# Calculate Precision
+Precision <- TP / (TP + FP)
+
+# Calculate Sensitivity (Recall)
+Sensitivity <- TP / (TP + FN)
+
+# Calculate Specificity
+Specificity <- TN / (TN + FP)
+
+# Calculate Accuracy
+Accuracy <- (TP + TN) / (TP + TN + FP + FN)
+
+# Calculate F1-score
+F1 <- 2 * Precision * Sensitivity / (Precision + Sensitivity)
+
+# Print the results
+cat("Precision:", round(Precision, 2), "\n")
+cat("Sensitivity:", round(Sensitivity, 2), "\n")
+cat("Specificity:", round(Specificity, 2), "\n")
+cat("Accuracy:", round(Accuracy, 2), "\n")
+cat("F1-score:", round(F1, 2), "\n")
+```
+
+```{r}
+
+# Calculate ROC curve and AUC-ROC using pROC
+roc_curve <- roc(as.numeric(y_test), as.numeric(pred_forest))
+auc_roc <- auc(roc_curve)
+
+# Print the AUC-ROC value
+cat("AUC-ROC:", round(auc_roc, 2), "\n")
+plot(roc_curve, col = "red", lwd = 2, main = "ROC Curve random forest")
+
+
+```
+Precision: 0.85
+Precision represents the ratio of correctly predicted positive cases (unemployed) to the total predicted positive cases. In this context, a precision of 0.82 means that out of all the instances the model predicted as positive (unemployed), approximately 82% were actually true positive cases (correctly predicted unemployed individuals).
+
+Sensitivity (Recall): 0.79
+Sensitivity, also known as recall, indicates the proportion of true positive cases (correctly predicted unemployed) to the total actual positive cases (unemployed). A sensitivity of 0.64 implies that the model correctly identified about 64% of the actual positive cases.
+
+Specificity: 0.96
+Specificity measures the proportion of true negative cases (correctly predicted employed) to the total actual negative cases (employed). With a specificity of 0.96, the model accurately identified approximately 96% of the actual negative cases.
+
+Accuracy: 0.93
+Accuracy represents the overall correctness of the model's predictions. An accuracy of 0.9 indicates that the model's predictions were correct for about 90% of the instances in the test set.
+
+f1: 0.81
+
+Confusion Matrix:
+The confusion matrix provides a detailed breakdown of the model's predictions. It shows how many instances were correctly and incorrectly classified into each category. From the confusion matrix:
+
+True Positives (TP): 9
+True Negatives (TN): 51
+False Positives (FP): 2
+False Negatives (FN): 5
+
+In conclusion, the Random Forest model demonstrates promising performance in predicting unemployment based on the given features. It achieves high precision, indicating that when the model predicts an individual to be unemployed, it is often correct. The high specificity highlights the model's ability to accurately identify employed individuals. However, the sensitivity is relatively lower, indicating that the model may miss some actual cases of unemployment. Overall, the model's accuracy of 90% suggests that it is effective in making accurate predictions across both positive and negative outcomes.
+
+
+```{r}
+# Load the required libraries
+library(ggplot2)
+library(dplyr)
+
+# Create a confusion matrix heatmap 
+confusion_matrix <- data.frame(confusion_matrix)
+
+# Reorder the levels of 'Actual' and 'Predicted' for proper ordering in the heatmap
+confusion_matrix$Actual <- factor(confusion_matrix$Actual, levels = c("0", "1"))
+confusion_matrix$Predicted <- factor(confusion_matrix$Predicted, levels = c("0", "1"))
+
+ggplot(data = confusion_matrix, aes(x = Actual, y = Predicted, fill = Freq)) +
+  geom_tile() +
+  geom_text(aes(label = Freq), color = "black", size = 12) +  # Add text labels
+  labs(title = "Confusion Matrix Heatmap with Numbers",
+       x = "Actual", y = "Predicted") +
+  scale_fill_gradient(low = "white", high = "blue") +  # Customize color scale
+  theme_minimal()  # Use a minimal theme for better readability
+
+
+```
+
+```{r}
+# Plot variable importance
+varImpPlot(forest, main = "Variable Importance")
+
+```
+
+#####################
+##  Logistic ##
+####################
+```{r}
+
+set.seed(0)
+split_idx <- sample(length(target), length(target) * 0.8)
+X_train <- features[split_idx, ]
+X_test <- features[-split_idx, ]
+y_train <- target[split_idx]
+y_test <- target[-split_idx]
+
+# Create a logistic regression model
+logistic_model <- glm(y_train ~ ., data = cbind(X_train, y_train), family = "binomial")
+
+# Predict using the logistic regression model
+pred_logistic <- predict(logistic_model, newdata = X_test, type = "response")
+
+# Convert predicted probabilities to binary predictions
+threshold <- 0.5
+pred_binary <- ifelse(pred_logistic > threshold, 1, 0)
+
+# Calculate confusion matrix
+confusion_matrix <- table(Actual = y_test, Predicted = pred_binary)
+
+# Calculate True Positives, True Negatives, False Positives, and False Negatives
+TP <- confusion_matrix[2, 2]
+TN <- confusion_matrix[1, 1]
+FP <- confusion_matrix[1, 2]
+FN <- confusion_matrix[2, 1]
+
+# Calculate Precision
+Precision <- TP / (TP + FP)
+
+# Calculate Sensitivity (Recall)
+Sensitivity <- TP / (TP + FN)
+
+# Calculate Specificity
+Specificity <- TN / (TN + FP)
+
+# Calculate Accuracy
+Accuracy <- (TP + TN) / (TP + TN + FP + FN)
+# Calculate F1 Score
+F1_Score <- 2 * (Precision * Sensitivity) / (Precision + Sensitivity)
+
+
+
+# Print the results
+cat("Precision:", round(Precision, 2), "\n")
+cat("Sensitivity:", round(Sensitivity, 2), "\n")
+cat("Specificity:", round(Specificity, 2), "\n")
+cat("Accuracy:", round(Accuracy, 2), "\n")
+# Print the F1 Score
+cat("F1 Score:", round(F1_Score, 2), "\n")
+
+```
+Precision (0.77): The model correctly identifies around 77% of predicted positives, indicating a relatively good ability to avoid false positives.
+Sensitivity (0.71): The model captures about 71% of actual positives, highlighting its capability to detect true positive cases.
+Specificity (0.94): The model accurately identifies approximately 94% of true negatives, showcasing its strength in avoiding false negatives.
+Accuracy (0.9): The model has an overall accuracy of 90%, indicating its ability to correctly classify a significant portion of instances.
+In summary, the model demonstrates balanced performance with high specificity and accuracy, while maintaining a respectable level of sensitivity and precision.
+
+```{r}
+  # Install the pROC package
+
+library(pROC)             # Load the pROC package
+
+# ROC Curve and AUC
+roc_curve <- roc(y_test, pred_binary)
+plot(roc_curve, col = "red", lwd = 2, main = "ROC Curve for Logistic Regression")
+auc(roc_curve)
+```
+
+
+The Area Under the Curve (AUC) value of 0.8288 indicates the performance of your classification model when evaluated using the Receiver Operating Characteristic (ROC) curve. The ROC curve is a graphical representation that illustrates the trade-off between the True Positive Rate (Sensitivity) and the False Positive Rate as the classification threshold changes.
+
+In your case, an AUC of 0.8288 suggests that your model has a good ability to distinguish between the two classes (e.g., employed and unemployed individuals) based on the predicted probabilities.
+
+```{r}
+# Load the required libraries
+library(ggplot2)
+library(dplyr)
+
+# Create a confusion matrix heatmap with numbers inside cells
+confusion_matrix <- data.frame(confusion_matrix)
+
+# Reorder the levels of 'Actual' and 'Predicted' for proper ordering in the heatmap
+confusion_matrix$Actual <- factor(confusion_matrix$Actual, levels = c("0", "1"))
+confusion_matrix$Predicted <- factor(confusion_matrix$Predicted, levels = c("0", "1"))
+
+ggplot(data = confusion_matrix, aes(x = Actual, y = Predicted, fill = Freq)) +
+  geom_tile() +
+  geom_text(aes(label = Freq), color = "black", size = 12) +  # Add text labels
+  labs(title = "Confusion Matrix Heatmap with Numbers",
+       x = "Actual", y = "Predicted") +
+  scale_fill_gradient(low = "white", high = "blue") +  # Customize color scale
+  theme_minimal()  # Use a minimal theme for better readability
+
+
+
+```
+```{r}
+# Create a data frame with actual and predicted values
+error_df <- data.frame(Actual = y_test, Predicted = pred_binary)
+
+# Add a column for correct or incorrect prediction
+error_df$Correct <- error_df$Actual == error_df$Predicted
+
+# Filter misclassified instances
+misclassified_df <- error_df[error_df$Correct == FALSE, ]
+misclassified_df
+
+
+
+```
+Assess the performance of a binary classification model by identifying and analyzing instances where the model's predictions were incorrect,
+
+```{r}
+# Display the features of misclassified instances
+misclassified_features <- X_test[rownames(misclassified_df), ]
+print(misclassified_features)
+
+```
+ Examines the feature values of the instances that the model misclassified, which can help you understand potential patterns or characteristics that might have contributed to the misclassifications.
+
+```{r}
+# Add predicted probabilities to the error data frame
+misclassified_df$Probability <- pred_logistic[rownames(misclassified_df)]
+
+# Filter instances with high confidence but incorrect prediction
+high_confidence_incorrect <- misclassified_df[misclassified_df$Probability > threshold, ]
+high_confidence_incorrect
+```
+identifies the  instances that were misclassified with a high level of confidence, which can be valuable for further analysis and understanding the model's behavior.
+
+
+#####################
+##  decision tree ##
+####################
+```{r}
+#####################
+##  decision tree ##
+####################
+# Install the partykit package if not already installed
+if (!requireNamespace("partykit", quietly = TRUE)) {
+  install.packages("partykit")
+}
+
+# Load the partykit package
+library(partykit)
+
+tree <- ctree(y_train ~ ., data = cbind(X_train, y_train))
+
+# Predict using the decision tree model
+pred_tree <- predict(tree, newdata = X_test)
+
+# Calculate confusion matrix
+confusion_matrix <- table(Actual = y_test, Predicted = pred_tree)
+
+# Calculate True Positives, True Negatives, False Positives, and False Negatives
+TP <- confusion_matrix[2, 2]
+TN <- confusion_matrix[1, 1]
+FP <- confusion_matrix[1, 2]
+FN <- confusion_matrix[2, 1]
+
+# Calculate Precision
+Precision <- TP / (TP + FP)
+
+# Calculate Sensitivity (Recall)
+Sensitivity <- TP / (TP + FN)
+
+# Calculate Specificity
+Specificity <- TN / (TN + FP)
+
+# Calculate Accuracy
+Accuracy <- (TP + TN) / (TP + TN + FP + FN)
+
+# Calculate F1 Score
+F1_Score <- 2 * (Precision * Sensitivity) / (Precision + Sensitivity)
+
+
+
+# Print the results
+cat("Precision:", round(Precision, 2), "\n")
+cat("Sensitivity:", round(Sensitivity, 2), "\n")
+cat("Specificity:", round(Specificity, 2), "\n")
+cat("Accuracy:", round(Accuracy, 2), "\n")
+cat("F1 Score:", round(F1_Score, 2), "\n")
+plot(tree, type = "simple")
+```
+
+
+```{r}
+# Get predicted probabilities for both classes
+pred_probs <- predict(tree, newdata = X_test, type = "prob")
+
+# Calculate ROC curve
+roc_obj <- roc(y_test, pred_probs[, 2])  # Use probabilities for the positive class
+
+# Plot ROC curve
+plot(roc_obj, col = "blue", print.thres = "best", main = "ROC Curve")
+
+# Add text for AUC value
+text(0.5, 0.3, paste("AUC =", round(auc(roc_obj), 2)), col = "blue")
+roc_obj 
+
+
+```
+
+
+```{r}
+# Load the required libraries
+library(ggplot2)
+library(dplyr)
+
+# Create a confusion matrix heatmap with numbers inside cells
+confusion_matrix <- data.frame(confusion_matrix)
+
+# Reorder the levels of 'Actual' and 'Predicted' for proper ordering in the heatmap
+confusion_matrix$Actual <- factor(confusion_matrix$Actual, levels = c("0", "1"))
+confusion_matrix$Predicted <- factor(confusion_matrix$Predicted, levels = c("0", "1"))
+
+ggplot(data = confusion_matrix, aes(x = Actual, y = Predicted, fill = Freq)) +
+  geom_tile() +
+  geom_text(aes(label = Freq), color = "black", size = 12) +  # Add text labels
+  labs(title = "Confusion Matrix Heatmap with Numbers",
+       x = "Actual", y = "Predicted") +
+  scale_fill_gradient(low = "white", high = "blue") +  # Customize color scale
+  theme_minimal()  # Use a minimal theme for better readability
+
+
+
+```
+The evaluation metrics offer a comprehensive assessment of classification model's performance on the dataset. 
+
+Precision (0.69):
+Precision, also known as positive predictive value, measures the proportion of correctly predicted positive instances (true positives) out of all instances predicted as positive (true positives + false positives).  a precision of 0.69 indicates that when your model predicts an individual as unemployed, it is correct about 69% of the time. This metric is particularly important when the cost of false positives is high.
+
+Sensitivity (0.79):
+Sensitivity, also known as recall or true positive rate, measures the proportion of correctly predicted positive instances (true positives) out of all actual positive instances (true positives + false negatives). A sensitivity of 0.79 indicates that our model is able to correctly identify around 79% of the actual unemployed individuals. This metric is valuable when the cost of false negatives is high.
+
+Specificity (0.91):
+Specificity measures the proportion of correctly predicted negative instances (true negatives) out of all actual negative instances (true negatives + false positives). With a specificity of 0.91, our model is effective at correctly identifying around 91% of the employed individuals. A high specificity is beneficial when avoiding false positives is crucial.
+
+Accuracy (0.88):
+Accuracy is the overall proportion of correctly predicted instances (true positives + true negatives) out of all instances. An accuracy of 0.88 indicates that our model is able to correctly classify 88% of the dataset's instances. While accuracy is an important overall metric, it may not fully capture the performance if the class distribution is imbalanced.
+
+In summary, your model demonstrates a balanced performance with good sensitivity, specificity, and accuracy. However, the precision could be improved to reduce the rate of false positives.
