@@ -1,2 +1,2 @@
 # ML-projects
-projects done with  python and R
+projects done with  python and R programming.
