@@ -1,6 +1,6 @@
 ---
 title: "FINAL CODE"
-author: "Khushbu Patel , huda , sabiha, abuzar, henry"
+author:sabiha
 date: "2023-06-19"
 output: pdf_document
 ---
